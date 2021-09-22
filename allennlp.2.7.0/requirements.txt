@@ -1,0 +1,12 @@
+allennlp==2.7.0
+en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.1.0/en_core_web_sm-3.1.0-py3-none-any.whl
+h5py==3.1.0
+huggingface-hub==0.0.17
+jieba==0.42.1
+pytorch-pretrained-bert==0.6.2
+jieba==0.42.1
+nltk==3.6.2
+pytorch-pretrained-bert==0.6.2
+tensorflow==2.6.0
+thulac==0.2.1
+transformers==4.1.0
