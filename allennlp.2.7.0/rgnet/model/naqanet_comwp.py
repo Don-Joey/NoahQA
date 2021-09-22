@@ -17,7 +17,6 @@ from allennlp.modules.matrix_attention.matrix_attention import MatrixAttention
 from allennlp.nn import util, InitializerApplicator, RegularizerApplicator
 from allennlp.nn.util import masked_softmax
 from rgnet.evaluate.drop_em_and_f1 import DropEmAndF1
-#from naqanet_edge_gated_roberta.pointernet import Decoder
 from allennlp.data import Batch
 from allennlp.common.util import START_SYMBOL, END_SYMBOL
 
@@ -87,12 +86,9 @@ class NumericallyAugmentedQaNet(Model):
 
         #if answering_abilities is None:
         self.answering_abilities = ["passage_span_extraction", "question_span_extraction", "generation"] #edit
-        #else:
-        #self.answering_abilities = answering_abilities
 
         self._bert_tokenizer = BertTokenizer(vocab_file='/home/leiwang/naqanet_generation_cn/roberta_zh/vocab.txt')#RobertaTokenizer.from_pretrained(roberta_pretrained_model)
         self.vocab_size = self._bert_tokenizer.vocab_size
-        #self.BERT = RobertaModel.from_pretrained(roberta_pretrained_model)
 
         Roberta_Config = BertConfig.from_json_file('/home/leiwang/naqanet_generation_cn/roberta_zh/bert_config_large.json')#.from_pretrained(roberta_pretrained_model)
         self.BERT = BertModel.from_pretrained('/home/leiwang/naqanet_generation_cn/roberta_zh/roberta_zh_large_model.ckpt.index', from_tf=True, config=Roberta_Config)
@@ -203,11 +199,7 @@ class NumericallyAugmentedQaNet(Model):
                 metadata: List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         question_passage_tokens = question_passage["tokens"]
-        #print("question_passage_tokens", question_passage_tokens.size())
-        #print(question_passage_tokens[0])
         pad_mask = question_passage["mask"]
-        #print("pad_mask", pad_mask.size())
-        #print(pad_mask[0])
         seqlen_ids = question_passage["tokens-type-ids"]
 
         max_seqlen = question_passage_tokens.shape[-1]
@@ -219,27 +211,17 @@ class NumericallyAugmentedQaNet(Model):
             torch.ones(pad_mask.shape, device=pad_mask.device).long().scatter(1, mask, torch.zeros(mask.shape,
                                                                                                    device=mask.device).long())
         passage_mask = seqlen_ids * pad_mask * cls_sep_mask
-        #print("passage_mask", passage_mask.size())
-        #print(passage_mask[0])
         # Shape: (batch_size, seqlen)
         question_mask = (1 - seqlen_ids) * pad_mask * cls_sep_mask
-        #print("question_mask", question_mask.size())
-        #print(question_mask[0])
         bert_out = self.BERT(input_ids=question_passage_tokens,attention_mask =pad_mask, token_type_ids = seqlen_ids).last_hidden_state#, token_type_ids=seqlen_ids)
 
         question_end = max(mask[:,1])
         question_out = bert_out[:,:question_end]
         question_mask = question_mask[:, :question_end]
-        #print("question_mask",question_mask.size())
-        #print(question_mask[0])
-        #mask_test_indices = mask_test_indices[:, :question_end]
-        #question_out = util.replace_masked_values(question_out, mask_test_indices.expand(-1, -1, question_out.size(-1)), 0.0)
         
         
         q_node_start_indices = ques_start_index.squeeze(-1)#[:,:,0].squeeze(-1).long()
-        # print("q_node_start_indices",q_node_start_indices)
         q_node_start_mask = (q_node_start_indices > -1).bool()#long()
-        # print("q_node_start_mask",q_node_start_mask)
         clamped_q_node_start_indices = util.replace_masked_values(q_node_start_indices, q_node_start_mask, 0)
         q_node_end_indices = ques_end_index.squeeze(-1)#[:,:,0].squeeze(-1).long()
         q_node_end_mask = (q_node_end_indices > -1).bool()#long()
@@ -277,9 +259,6 @@ class NumericallyAugmentedQaNet(Model):
         SEP_2 = encoded_SEP[:,1,:]
         passage_out = bert_out
         del bert_out
-
-        #mask_test_indices = mask_test_indices
-        #passage_out = util.replace_masked_values(passage_out, mask_test_indices.expand(-1, -1, passage_out.size(-1)).bool(), 0.0)
         
         p_node_start_indices = para_start_index.squeeze(-1)#[:,:,0].squeeze(-1).long()
         p_node_start_mask = (p_node_start_indices > -1).bool()#long()
@@ -383,17 +362,6 @@ class NumericallyAugmentedQaNet(Model):
         passage_weights = masked_softmax(passage_weights, passage_mask)
         passage_vector = util.weighted_sum(passage_out, passage_weights)
 
-        #print("passage_out", passage_out.size())
-        #print(passage_out[0])
-        #print(passage_out[0][19])
-        #print(passage_out[0][20])
-        
-        #print("interesting:")
-        #print(interesting[0])
-        #print(interesting[0][19])
-        #print(interesting[0][20])
-        #print("question_out", question_out.size())
-        #exit()
         if len(self.answering_abilities) > 1:
             # Shape: (batch_size, number_of_abilities)
             answer_ability_logits = \
@@ -411,8 +379,6 @@ class NumericallyAugmentedQaNet(Model):
             # Shape: (batch_size, passage_length)
             passage_span_start_log_probs = util.masked_log_softmax(passage_span_start_logits, passage_mask)
             passage_span_end_log_probs = util.masked_log_softmax(passage_span_end_logits, passage_mask)
-            #print("passage_span_start_log_probs",passage_span_start_log_probs.size(),passage_span_start_log_probs)
-            #print("passage_span_end_log_probs", passage_span_end_log_probs.size(), passage_span_end_log_probs)
 
             # Info about the best passage span prediction
             passage_span_start_logits = util.replace_masked_values(passage_span_start_logits, passage_mask.bool(), -1e7)
@@ -439,12 +405,8 @@ class NumericallyAugmentedQaNet(Model):
             # Shape: (batch_size, question_length)
             question_span_end_logits = \
                 self._question_span_end_predictor(encoded_question_for_span_prediction).squeeze(-1)
-            #print("question_span_start_logits",question_span_start_logits)
             question_span_start_log_probs = util.masked_log_softmax(question_span_start_logits, question_mask)
-            #print("question_span_start_log_probs",question_span_start_log_probs)
             question_span_end_log_probs = util.masked_log_softmax(question_span_end_logits, question_mask)
-            #print("question_span_start_log_probs", question_span_start_log_probs.size(), question_span_start_log_probs)
-            #print("question_span_end_log_probs", question_span_end_log_probs.size(), question_span_end_log_probs)
 
             # Info about the best question span prediction
             question_span_start_logits = \
@@ -469,15 +431,12 @@ class NumericallyAugmentedQaNet(Model):
             number_indices = number_indices[:,:,0].long()
             number_mask = (number_indices != -1).bool()#long()
             clamped_number_indices = util.replace_masked_values(number_indices, number_mask, 0)
-            #encoded_passage_for_numbers = modeled_passage_list[0]
             encoded_passage_for_numbers = passage_out
-            #encoded_passage_for_numbers = inp_passage_enc_seq
             # Shape: (batch_size, # of numbers in the passage, encoding_dim)
             encoded_numbers = torch.gather(
                 encoded_passage_for_numbers,
                 1,
                 clamped_number_indices.unsqueeze(-1).expand(-1, -1, encoded_passage_for_numbers.size(-1)))
-            #print("encoded_numbers",encoded_numbers)
             passage_numbers = torch.gather(
                 question_passage_tokens,
                 1,
@@ -488,14 +447,9 @@ class NumericallyAugmentedQaNet(Model):
             passage_encoded_numbers = torch.cat(
                 [encoded_numbers, passage_vector.unsqueeze(1).repeat(1, encoded_numbers.size(1), 1)], -1)
 
-            #print("passage_encoded_numbers",passage_encoded_numbers,passage_encoded_numbers.size())
-            #encoded_passage_for_numbers = torch.cat(
-            #    [encoded_passage_for_numbers, passage_vector.unsqueeze(1).repeat(1, encoded_passage_for_numbers.size(1), 1)], -1) #.........
-
             question_number_indices = question_number_indices[:,:,0].long()
             question_number_mask = (question_number_indices != -1).bool()#long()
             clamped_question_number_indices = util.replace_masked_values(question_number_indices, question_number_mask,0)
-            #encoded_question_for_numbers = modeled_question_list[0]
             encoded_question_for_numbers = question_out
             question_encoded_numbers = torch.gather(
                 encoded_question_for_numbers,
@@ -511,9 +465,6 @@ class NumericallyAugmentedQaNet(Model):
                 [question_encoded_numbers, question_vector.unsqueeze(1).repeat(1, question_encoded_numbers.size(1), 1)],
                 -1)
 
-            #encoded_question_for_numbers = torch.cat(
-            #    [encoded_question_for_numbers, question_vector.unsqueeze(1).repeat(1, encoded_question_for_numbers.size(1), 1)],
-            #    -1)
             feed_tensor = {"tokens":answer_as_generation['tokens'][:,:-1],
                            "mask":answer_as_generation['mask'][:,:-1],
                            "tokens-type-ids" : answer_as_generation["tokens-type-ids"][:,:-1]}
@@ -522,15 +473,12 @@ class NumericallyAugmentedQaNet(Model):
             passage_question_encoded_numbers = torch.cat((passage_encoded_numbers,question_encoded_numbers),1)
 
             x = torch.cat([clamped_passage_numbers, clamped_question_numbers], -1) #..................................
-            #x = torch.cat((inp_passage_with_oovs,inp_question_with_oovs),1)
 
             input_pad_mask = torch.where(x != 0, self.true_rep, self.false_rep)
 
             #decoder_input
             output_embedded = self.embedded(input_ids=answer_as_generation['tokens'][:, :-1],
                                             token_type_ids=answer_as_generation['tokens-type-ids'][:, :-1])#self.BERT(input_ids=answer_as_generation['tokens'],
-                              #          attention_mask=answer_as_generation['mask'],
-                              #          token_type_ids=answer_as_generation['tokens-type-ids']).get_input_embeddings
 
             seqlen_first = output_embedded.permute(1, 0, 2)
             output_seq_len = seqlen_first.size(0)
@@ -543,8 +491,6 @@ class NumericallyAugmentedQaNet(Model):
 
             context_vector, _ = self.attention_layer(passage_question_encoded_numbers, decoder_hstates_batchfirst,
                                                      input_pad_mask)
-            #print("context_vector:", context_vector)
-            #print("context_vector_size", context_vector.size())
             step_generation_for_prob: List[torch.Tensor] = []
             coverages = [torch.zeros_like(x).type(torch.float).cuda()]
             step_generation_for_prediction: List[torch.Tensor] = []
@@ -559,43 +505,26 @@ class NumericallyAugmentedQaNet(Model):
 
                 decoder_h_values, decoder_hidden_state = self.decoder_rnn(input_to_decoder, decoder_hidden_state)
                 # decoder_h_values is shape 1XbatchsizeXhiddensize
-                #print("decoder_h_value", decoder_h_values)
-                #print("decoder_h_value", decoder_h_values.size())
-                #print("decoder_hidden_state", decoder_hidden_state)
                 decoder_h_values_batchfirst = decoder_h_values.permute(1, 0, 2)
 
                 decoder_hstates_batchfirst = decoder_hidden_state.permute(1, 0, 2)
 
-                # concatenated_decoder_states = torch.cat([decoder_cstates_batchfirst, decoder_hstates_batchfirst], dim=-1)
-                #prev_coverage = coverages[-1]
                 context_vector, attn_weights = self.attention_layer(passage_question_encoded_numbers, decoder_hstates_batchfirst,
                                                                     input_pad_mask)
                 all_attn_weights.append(attn_weights.squeeze(1))
-
-                #coverages.append(prev_coverage + attn_weights.squeeze(1))
-
-                #print("context_vector_{}".format(_i), context_vector, context_vector.size())
-                #print("attn_weights_{}".format(_i), attn_weights, attn_weights.size())
-                #attn_weights = attn_weights.scatter_(2,prediction_after_copying.unsqueeze(1),0)
                 decstate_and_context = torch.cat([decoder_h_values_batchfirst, context_vector],
                                                  dim=-1)  # batchsizeXdec_seqlenX3*hidden_size
 
                 prefinal_tensor = self.statenctx_to_prefinal(decstate_and_context)
                 seqlen_last = prefinal_tensor.permute(0, 2, 1)  # batchsizeXpre_output_dimXdec_seqlen
-                #print("seqlen_last", seqlen_last, seqlen_first.size())
                 logits = self.output_projector(seqlen_last)
-                #print("logits", logits, logits.size())
                 logits = logits.permute(0, 2, 1)  # batchXdec_seqlenXvocab
 
                 # now executing copymechanism
                 probs_after_copying = self.copymech(logits, attn_weights, decoder_hstates_batchfirst,
                                                     input_to_decoder.permute(1, 0, 2), context_vector, x)
-                #print("probs_after_copying:",probs_after_copying,probs_after_copying.size())
-
-                #probs_after_copying = probs_after_copying.scatter_(2,max_mask,-10)
                 step_generation_for_prob.append(probs_after_copying)
 
-            #print("step_generation_for_prob",step_generation_for_prob)
             generation_for_prob = torch.cat(step_generation_for_prob,1)
             best_for_generation = torch.argmax(generation_for_prob, -1)
             best_generation_log_probs = torch.gather(generation_for_prob, 2, best_for_generation.unsqueeze(-1)).squeeze(-1)
@@ -620,15 +549,10 @@ class NumericallyAugmentedQaNet(Model):
                 if answering_ability == "passage_span_extraction":
                     # Shape: (batch_size, # of answer spans)
                     gold_passage_span_starts = answer_as_passage_spans[:, :, 0]
-                    #print("gold_passage_span_starts",gold_passage_span_starts)
                     gold_passage_span_ends = answer_as_passage_spans[:, :, 1]
-                    #print("gold_passage_span_ends",gold_passage_span_ends)
                     # Some spans are padded with index -1,
                     # so we clamp those paddings to 0 and then mask after `torch.gather()`.
-                    #print("gold_passage_span_starts",gold_passage_span_starts)
                     gold_passage_span_mask = (gold_passage_span_starts != -1).bool()#.long()
-                    #print("gold_passage_span_mask",gold_passage_span_mask)
-                    #print("gold_passage_span_mask",gold_passage_span_mask)
                     clamped_gold_passage_span_starts = \
                         util.replace_masked_values(gold_passage_span_starts, gold_passage_span_mask, 0)
                     clamped_gold_passage_span_ends = \
@@ -636,35 +560,26 @@ class NumericallyAugmentedQaNet(Model):
                     # Shape: (batch_size, # of answer spans)
                     log_likelihood_for_passage_span_starts = \
                         torch.gather(passage_span_start_log_probs, 1, clamped_gold_passage_span_starts)
-                    #print("log_likelihood_for_passage_span_starts",log_likelihood_for_passage_span_starts.size(),log_likelihood_for_passage_span_starts)
                     log_likelihood_for_passage_span_ends = \
                         torch.gather(passage_span_end_log_probs, 1, clamped_gold_passage_span_ends)
-                    #print("log_likelihood_for_passage_span_ends",log_likelihood_for_passage_span_ends.size(),log_likelihood_for_passage_span_ends)
                     # Shape: (batch_size, # of answer spans)
                     log_likelihood_for_passage_spans = \
                         log_likelihood_for_passage_span_starts + log_likelihood_for_passage_span_ends
-                    #print("log_likelihood_for_passage_spans",log_likelihood_for_passage_spans.size(),log_likelihood_for_passage_spans)
                     # For those padded spans, we set their log probabilities to be very small negative value
                     log_likelihood_for_passage_spans = \
                         util.replace_masked_values(log_likelihood_for_passage_spans, gold_passage_span_mask, -1e7)
-                    #print("masked_log_likelihood_for_passage_spans",log_likelihood_for_passage_spans.size(),log_likelihood_for_passage_spans)
 
                     # Shape: (batch_size, )
                     log_marginal_likelihood_for_passage_span = util.logsumexp(log_likelihood_for_passage_spans)
-                    #print("log_marginal_likelihood_for_passage_span",log_marginal_likelihood_for_passage_span)
                     log_marginal_likelihood_list.append(log_marginal_likelihood_for_passage_span)
-                    #print("log_marginal_likelihood_list",log_marginal_likelihood_list)
 
                 elif answering_ability == "question_span_extraction":
                     # Shape: (batch_size, # of answer spans)
                     gold_question_span_starts = answer_as_question_spans[:, :, 0]
-                    #print("gold_question_span_starts",gold_question_span_starts)
                     gold_question_span_ends = answer_as_question_spans[:, :, 1]
-                    #print("gold_question_span_ends",gold_question_span_ends)
                     # Some spans are padded with index -1,
                     # so we clamp those paddings to 0 and then mask after `torch.gather()`.
                     gold_question_span_mask = (gold_question_span_starts != -1).bool()#long()
-                    #print("gold_question_span_mask",gold_question_span_mask)
                     clamped_gold_question_span_starts = \
                         util.replace_masked_values(gold_question_span_starts, gold_question_span_mask, 0)
                     clamped_gold_question_span_ends = \
@@ -672,29 +587,21 @@ class NumericallyAugmentedQaNet(Model):
                     # Shape: (batch_size, # of answer spans)
                     log_likelihood_for_question_span_starts = \
                         torch.gather(question_span_start_log_probs, 1, clamped_gold_question_span_starts)
-                    #print("log_likelihood_for_question_span_starts",log_likelihood_for_question_span_starts.size(),log_likelihood_for_question_span_starts)
                     log_likelihood_for_question_span_ends = \
                         torch.gather(question_span_end_log_probs, 1, clamped_gold_question_span_ends)
-                    #print("log_likelihood_for_question_span_ends",log_likelihood_for_question_span_ends.size(),log_likelihood_for_question_span_ends)
                     # Shape: (batch_size, # of answer spans)
                     log_likelihood_for_question_spans = \
                         log_likelihood_for_question_span_starts + log_likelihood_for_question_span_ends
-                    #print("log_likelihood_for_question_spans",log_likelihood_for_question_spans)
                     # For those padded spans, we set their log probabilities to be very small negative value
 
                     log_likelihood_for_question_spans = \
                         util.replace_masked_values(log_likelihood_for_question_spans,
                                                    gold_question_span_mask,
                                                    -1e7)
-                    #print("masked_log_likelihood_for_question_spans",log_likelihood_for_question_spans)
-                    # Shape: (batch_size, )
-                    # pylint: disable=invalid-name
                     log_marginal_likelihood_for_question_span = \
                         util.logsumexp(log_likelihood_for_question_spans)
-                    #print("log_marginal_likelihood_for_question_span",log_marginal_likelihood_for_question_span)
 
                     log_marginal_likelihood_list.append(log_marginal_likelihood_for_question_span)
-                    #print("log_marginal_likelihood_list",log_marginal_likelihood_list)
 
 
                 elif answering_ability == 'generation':
@@ -703,36 +610,20 @@ class NumericallyAugmentedQaNet(Model):
                     pad_mask = torch.where(targets_tensor_seqfirst != 0, self.true_rep, self.false_rep)
                     step_log_list = []
                     step_masked_log_list = []
-                    # print("step_generation_for_prob:",step_generation_for_prob)
                     for _i in range(len(step_generation_for_prob)):
                         predicted_probs = step_generation_for_prob[_i].squeeze(1)
-                        # print("predicted_probs",predicted_probs)
                         true_labels = targets_tensor_seqfirst[_i]
                         mask_labels = pad_mask[_i]
                         selected_probs = torch.gather(predicted_probs, 1, true_labels.unsqueeze(1))
                         selected_probs = selected_probs.squeeze(1)
-                        # print("selected_probs:",selected_probs)
                         selected_neg_logprobs = torch.log(selected_probs)
-                        # print("selected_neg_logprobs:",selected_neg_logprobs)
                         step_log_list.append(selected_neg_logprobs * mask_labels)
 
-                        # step_masked_log_list.append(util.replace_masked_values(selected_neg_logprobs, mask_labels, -1e7))
-
-                    # print("step_non_log_list:",step_non_log_list)
                     log_likelihood_for_generation = torch.stack(step_log_list, 1)
-                    #print("log_likelihood_for_generation",log_likelihood_for_generation)
-                    # log_marginal_likelihood_for_generation = torch.stack(step_masked_log_list, 1)
-                    # log_marginal_likelihood_for_generation_1 = util.logsumexp(log_marginal_likelihood_for_generation, 1)
 
                     log_marginal_likelihood_for_generation_2 = log_likelihood_for_generation.sum(1,keepdim=True)
-                    #print("log_marginal_likelihood_for_generation",log_marginal_likelihood_for_generation_2)
-                    #print("generation_mask_index",generation_mask_index)
                     log_marginal_likelihood_for_generation_2 = util.replace_masked_values(log_marginal_likelihood_for_generation_2,generation_mask_index.squeeze(1).bool(),-1e7)
-                    #print("masked_log_marginal_likelihood_for_generation", log_marginal_likelihood_for_generation_2)
-                    # log_marginal_likelihood_for_generation_2 = torch.sum(log_likelihood_for_generation, -1)
                     log_marginal_likelihood_for_generation_2 = util.logsumexp(log_marginal_likelihood_for_generation_2)
-                    # log_marginal_likelihood_for_generation = util.logsumexp(log_likelihood_for_generation)
-                    #print("log_marginal_likelihood_for_generation",log_marginal_likelihood_for_generation_2)
                     log_marginal_likelihood_list.append(log_marginal_likelihood_for_generation_2)
 
 
@@ -743,16 +634,12 @@ class NumericallyAugmentedQaNet(Model):
             if len(self.answering_abilities) > 1:
                 # Add the ability probabilities if there are more than one abilities
                 all_log_marginal_likelihoods = torch.stack(log_marginal_likelihood_list, dim=-1)
-                #print("all_log_marginal_likelihoods",all_log_marginal_likelihoods.size(),all_log_marginal_likelihoods)
                 all_log_marginal_likelihoods = all_log_marginal_likelihoods + answer_ability_log_probs
-                #print("all_log_marginal_likelihoods", all_log_marginal_likelihoods.size(), all_log_marginal_likelihoods)
                 marginal_log_likelihood = util.logsumexp(all_log_marginal_likelihoods)
-                #print("marginal_log_likelihood",marginal_log_likelihood.size(),marginal_log_likelihood)
             else:
                 marginal_log_likelihood = log_marginal_likelihood_list[0]
 
             output_dict["loss"] = - marginal_log_likelihood.mean() + edge_loss
-            #print("output_dict[loss]",output_dict["loss"])
 
         # Compute the metrics and add the tokenized input to the output.
         if metadata is not None:
@@ -762,12 +649,10 @@ class NumericallyAugmentedQaNet(Model):
             question_passage_y_edge = y_edges[:,-1:,:pp_graph.size(1)]
             question_question_y_edge = y_edges[:, -1:, pp_graph.size(1):-1]
             
-            #question_y_node = y_nodes[:,-1:]
             output_dict["question_id"] = []
             output_dict["answer"] = []
             question_tokens = []
             passage_tokens = []
-            #best_answer_ability_list =
             for i in range(batch_size):
                 
                 predict_edges = []
@@ -775,7 +660,6 @@ class NumericallyAugmentedQaNet(Model):
                 question_question_predict_edges = question_question_y_edges[i].detach().cpu().numpy()
                 question_passage_predict_edge = question_passage_y_edge[i].detach().cpu().numpy()
                 question_question_predict_edge = question_question_y_edge[i].detach().cpu().numpy()
-                #question_predict_node = list(question_y_node[i].detach().cpu().numpy())
                 for qp_y, qpedges in enumerate(question_passage_predict_edges):
                     for qp_x, pnode in enumerate(qpedges):
                         if pnode == 1:
@@ -790,9 +674,6 @@ class NumericallyAugmentedQaNet(Model):
                 for q, qedges in enumerate(question_question_predict_edge[0]):
                     if qedges == 1:
                         predict_edges.append(['<q>', '<q{}>'.format(int(q + 1))])
-                
-                #if question_predict_node[0] == 1:
-                #    predict_nodes.append("<q>")
                 question_tokens.append(metadata[i]['question_tokens'])
                 passage_tokens.append(metadata[i]['passage_tokens'])
                 if len(self.answering_abilities) > 1:
@@ -808,31 +689,24 @@ class NumericallyAugmentedQaNet(Model):
                     passage_str = metadata[i]['question_passage_text']
                     offsets = metadata[i]['question_passage_token_offsets']
                     (predicted_start, predicted_end) = tuple(best_passage_span[i].detach().cpu().numpy())
-                    #start_offset = offsets[predicted_start][0]
-                    #end_offset = offsets[predicted_end][1]
                     answer_passage_token_ids = question_passage_tokens[i,predicted_start:predicted_end+1].detach().cpu().numpy()
                     predicted_answer = ' '.join(self._bert_tokenizer.convert_ids_to_tokens(answer_passage_token_ids,skip_special_tokens=True))
 
                     answer_json["value"] = predicted_answer
-                    #answer_json["spans"] = [(start_offset, end_offset)]
                 elif predicted_ability_str == "question_span_extraction":
                     answer_json["answer_type"] = "question_span"
                     question_str = metadata[i]['question_passage_text']
                     offsets = metadata[i]['question_passage_token_offsets']
                     (predicted_start, predicted_end) = tuple(best_question_span[i].detach().cpu().numpy())
-                    #start_offset = offsets[predicted_start][0]
-                    #end_offset = offsets[predicted_end][1]
                     answer_question_token_ids = question_passage_tokens[i,predicted_start:predicted_end + 1].detach().cpu().numpy()
                     predicted_answer = ' '.join(self._bert_tokenizer.convert_ids_to_tokens(answer_question_token_ids, skip_special_tokens=True))
 
                     answer_json["value"] = predicted_answer
-                    #answer_json["spans"] = [(start_offset, end_offset)]
 
 
                 elif predicted_ability_str == 'generation':
                     answer_json["answer_type"] = "generation"
                     predicted_indices = best_for_generation[i].detach().cpu().numpy()#output_dict["predictions"]
-                    #pq=torch.cat([question['tokens'],passage['tokens']],-1)
                     indices = list(predicted_indices)#.gather(0,predicted_indices[i]))
                     predicted_tokens = self._bert_tokenizer.convert_ids_to_tokens(indices,skip_special_tokens=True)
                     answer_json["generation"] = ""
@@ -844,8 +718,6 @@ class NumericallyAugmentedQaNet(Model):
 
                     predicted_answer = answer_json['generation'].strip()#.replace(' ','') mark!
                     answer_json["generation"] = indices
-                    #predicted_answer = str(answer_json["generation"])
-                    #print("predicted_answer",predicted_answer)
                     answer_json["value"] = predicted_answer
                 else:
                     raise ValueError(f"Unsupported answer ability: {predicted_ability_str}")
@@ -865,11 +737,9 @@ class NumericallyAugmentedQaNet(Model):
                     "question_id": metadata[i].get("question_id", ''),
                     'passage_id': metadata[i].get("passage_id",'')
                 }
-                #answer_history = list(answer_history.values())
                 if answer_annotations:
                     self._drop_metrics(predicted_answer, answer_annotations,answer_history,answer_type,node_bag)
             # This is used for the demo.
-            #output_dict["passage_question_attention"] = passage_question_attention
             output_dict["question_tokens"] = question_tokens
             output_dict["passage_tokens"] = passage_tokens
         return output_dict
@@ -920,69 +790,3 @@ class NumericallyAugmentedQaNet(Model):
         relevant_mask = target_mask[:, 1:].contiguous()
 
         return util.sequence_cross_entropy_with_logits(logits, relevant_targets, relevant_mask, average= None)
-    '''
-    @overrides
-    def forward_on_instance(self, instance: SyncedFieldsInstance) -> Dict[str, numpy.ndarray]:
-        """
-        Takes an :class:`~allennlp.data.instance.Instance`, which typically has raw text in it,
-        converts that text into arrays using this model's :class:`Vocabulary`, passes those arrays
-        through :func:`self.forward()` and :func:`self.decode()` (which by default does nothing)
-        and returns the result.  Before returning the result, we convert any
-        ``torch.Tensors`` into numpy arrays and remove the batch dimension.
-        """
-        return self.forward_on_instances([instance])[0]
-    @overrides
-    def forward_on_instances(self,
-                             instances: List[SyncedFieldsInstance]) -> List[Dict[str, numpy.ndarray]]:
-        """
-        Takes a list of  :class:`~allennlp.data.instance.Instance`s, converts that text into
-        arrays using this model's :class:`Vocabulary`, passes those arrays through
-        :func:`self.forward()` and :func:`self.decode()` (which by default does nothing)
-        and returns the result.  Before returning the result, we convert any
-        ``torch.Tensors`` into numpy arrays and separate the
-        batched output into a list of individual dicts per instance. Note that typically
-        this will be faster on a GPU (and conditionally, on a CPU) than repeated calls to
-        :func:`forward_on_instance`.
-
-        Parameters
-        ----------
-        instances : List[Instance], required
-            The instances to run the model on.
-
-        Returns
-        -------
-        A list of the models output for each instance.
-        """
-        batch_size = len(instances)
-        with torch.no_grad():
-            cuda_device = self._get_prediction_device()
-            dataset = Batch(instances)
-            dataset.index_instances(self.vocab)
-            model_input = util.move_to_device(dataset.as_tensor_dict(), cuda_device)
-            outputs = self.decode(self(**model_input))
-
-            instance_separated_output: List[Dict[str, numpy.ndarray]] = [{} for _ in dataset.instances]
-            for name, output in list(outputs.items()):
-                if isinstance(output, torch.Tensor):
-                    # NOTE(markn): This is a hack because 0-dim pytorch tensors are not iterable.
-                    # This occurs with batch size 1, because we still want to include the loss in that case.
-                    if output.dim() == 0:
-                        output = output.unsqueeze(0)
-
-                    if output.size(0) != batch_size:
-                        self._maybe_warn_for_unseparable_batches(name)
-                        continue
-                    output = output.detach().cpu().numpy()
-                elif len(output) != batch_size:
-                    self._maybe_warn_for_unseparable_batches(name)
-                    continue
-                for instance_output, batch_element in zip(instance_separated_output, output):
-                    instance_output[name] = batch_element
-
-            if instance_separated_output[0]['answer']['answer_type'] == 'generation':
-                output_words = []
-                output_words = self._bert_tokenizer.convert_ids_to_tokens(instance_separated_output[0]['answer']['value'])
-                if output_words != []:
-                    instance_separated_output[0]['answer']['value']=" ".join(output_words)
-            return instance_separated_output
-    '''
