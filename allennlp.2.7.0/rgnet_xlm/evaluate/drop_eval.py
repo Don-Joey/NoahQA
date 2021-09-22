@@ -130,13 +130,6 @@ def get_metrics(predicted: Union[str, List[str], Tuple[str, ...]],
                 history_answer: Dict,
                 answer_type: List,
                 node_bag: Dict):
-    """
-    Takes a predicted answer and a gold answer (that are both either a string or a list of
-    strings), and returns exact match and the DROP F1 metric for the prediction.  If you are
-    writing a script for evaluating objects in memory (say, the output of predictions during
-    validation, or while training), this is the function you want to call, after using
-    :func:`answer_json_to_strings` when reading the gold answer from the released data file.
-    """
     type_dict = {'type': 0}
     type_EM = {'1': 0.0, '2': 0.0, '3': 0.0, '4': 0.0, '5': 0.0, '6': 0.0, '7': 0.0}
     type_f1 = {'1': 0.0, '2': 0.0, '3': 0.0, '4': 0.0, '5': 0.0, '6': 0.0, '7': 0.0}
@@ -197,10 +190,6 @@ def get_metrics(predicted: Union[str, List[str], Tuple[str, ...]],
             compute_right = 0.0
             compute_number = 1.0
 
-        # print("predicted_bags_formula[1]",[set(split_equation_tt(split_equation_tt(tt[1][0])[0]))])
-        # print("gold_bags_formula[1]",[set(split_equation_tt(split_equation_tt(tt[1][0])[0]))])
-        # f1_per_bag = _align_bags(predicted_bags_formula[1], gold_bags_formula[1])
-        # print("gold_bags_formula",gold_bags_formula[1])
         f1_per_bag = _align_bags(tt[1], gold_bags_formula[1])
         f1 = np.mean(f1_per_bag)
         f1 = round(f1, 2)
@@ -215,12 +204,7 @@ def get_metrics(predicted: Union[str, List[str], Tuple[str, ...]],
     else:
         predicted_bags = _answer_to_bags(predicted)
         gold_bags = _answer_to_bags(gold)
-
-        # print("set(predicted_bags[0])",set(predicted_bags[0]))
-        # print("set(gold_bags[0])",set(gold_bags[0]))
         if set(predicted_bags[0]) == set(gold_bags[0]) and len(predicted_bags[0]) == len(gold_bags[0]):
-            # print(predicted_bags[0],gold_bags[0])
-            # print('span')
             exact_match = 1.0
         else:
             exact_match = 0.0
@@ -298,15 +282,7 @@ def evaluate_json(annotations: Dict[str, Any], predicted_answers: Dict[str, Any]
 
     global_em = np.mean(instance_exact_match)
     global_f1 = np.mean(instance_f1)
-    print("Exact-match accuracy {0:.2f}".format(global_em * 100))
-    print("F1 score {0:.2f}".format(global_f1 * 100))
-    print("{0:.2f}   &   {1:.2f}".format(global_em * 100, global_f1 * 100))
-    print("----")
     total = np.sum([len(v) for v in type_to_em.values()])
-    for typ in sorted(type_to_em.keys()):
-        print("{0}: {1} ({2:.2f}%)".format(typ, len(type_to_em[typ]), 100. * len(type_to_em[typ])/total))
-        print("  Exact-match accuracy {0:.3f}".format(100. * np.mean(type_to_em[typ])))
-        print("  F1 score {0:.3f}".format(100. * np.mean(type_to_f1[typ])))
     return global_em, global_f1
 
 
@@ -356,19 +332,11 @@ def evaluate_edge(node_dict, evidence_edges, predict_edges, question_id):
         'gold_edges': evidence_edges[1:],
         'predict_edges': predict_edges[1:]
     }
-    with open("edge_en_xlmr.json", 'a', encoding='utf-8') as f:
-        #json.dump(edge,f, ensure_ascii=False, indent=4)
-        j = json.dumps(edge, ensure_ascii=False)
-        f.write(j + '\n')
-        f.close()
 
     evidence_nodes = []
 
     
 
-    #print("G1",G1.nodes,G1.edges)
-    #print("G2", G2.nodes, G2.edges)
-    #cost = tuple(nx.optimize_edit_paths(G1, G2))[0][2]
     cost = 1.0
 
     predict_set = set(['{}-{}'.format(edge[0],edge[1]) for edge in predict_edges])
