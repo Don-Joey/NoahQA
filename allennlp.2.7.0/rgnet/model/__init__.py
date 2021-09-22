@@ -1,0 +1,1 @@
+from rgnet.model.naqanet_comwp import NumericallyAugmentedQaNet

@@ -1,0 +1,69 @@
+{
+  "dataset_reader": {
+    "type": "zh_en_xlm-edge",
+    "tokenizer":{
+      "type": "word",
+      "word_splitter": {
+          "type": "thunlp"
+      }
+    },
+    "roberta_tokenizer":{
+      "type": "xlm-zh-en-edge",
+      "pretrained_model": "xlm-roberta-large"
+    },
+    "token_indexers": {
+      "tokens": {
+        "type": "xlm-zh-en-edge",
+        "pretrained_model": "xlm-roberta-large"
+      }
+    },
+    "passage_length_limit": 800,
+    "question_length_limit": 800,
+    "skip_when_all_empty": ["passage_span","question_span","generation"],
+    "instance_format": "drop"
+  },
+  "validation_dataset_reader": {
+    "type": "en_xlm-edge",
+    "roberta_tokenizer":{
+      "type": "xlm-en-edge",
+      "pretrained_model": "xlm-roberta-large"
+    },
+    "token_indexers": {
+      "tokens": {
+        "type": "xlm-en-edge",
+        "pretrained_model": "xlm-roberta-large"
+      }
+    },
+    "passage_length_limit": 800,
+    "question_length_limit": 800,
+    "skip_when_all_empty": ["passage_span","question_span","generation"],
+    "instance_format": "drop"
+  },
+  "train_data_path": "train_cn.json train.json",
+  "validation_data_path": "valid.json",
+  "model": {
+    "type": "comwp-xlm-edge",
+    "roberta_pretrained_model": "xlm-roberta-large",
+    "dropout_prob": 0.1,
+    "answering_abilities": [
+      "passage_span_extraction", 
+      "question_span_extraction",
+      "generation"
+    ]
+  },
+  "iterator": {
+    "type": "basic",
+    "batch_size": 4
+  },
+  "trainer": {
+          "num_epochs": 40,
+          "grad_norm": 5,
+          "patience": 10,
+          "validation_metric": "+f1",
+          "cuda_device": 10,
+          "optimizer": {
+              "type": "bert_adam",
+              "lr": 5e-6
+          }
+  }
+}
