@@ -280,19 +280,6 @@ class CharmGNN(nn.Module):
 
         log_marginal = nn.NLLLoss(edge_cw)(y, graph_evidence)
 
-        '''
-        #evidence = torch.cat([passage_evidence, question_evidence], dim=1).long()
-
-        #clamped_gold_evidence = util.replace_masked_values(evidence, evidence_pad_mask, 0)
-        evidence_mask = (graph_mask[:,0,:] != 0).long()
-        log_likelihood_for_edge = torch.gather(y, 3, graph_evidence.unsqueeze(-1).expand(-1, -1, -1, 2))[:,:,:,0].squeeze(-1)
-        #log_likelihood_for_edge = util.replace_masked_values(log_likelihood_for_edge[:, :, :,0].squeeze(-1),
-        #                                                         graph_mask, -1e7)
-        log_marginal = log_likelihood_for_edge.sum(-1)
-        log_marginal = util.replace_masked_values(log_marginal,evidence_mask,-1e7)
-        log_marginal = util.logsumexp(log_marginal,-1,keepdim=True)
-
-        '''
         p_node = x[:, :p_len, :]
         q_node = x[:, p_len:(p_len + q_len), :]
         question_node = x[:, (p_len + q_len):, :]
