@@ -10,6 +10,17 @@ In this folder, we provided resources in two languages, zh (chinese) and en (eng
 
 We provided the code in two allennlp versions, 2.7.0 and 0.9.0, you can choose the version you want.
 
-Firstly, 
+Firstly, we select the folder corresponding to the version and enter it.
 
+### Installation
+
+Development environment:
+```
+python == 3.6.0
+# Requirements
+pip install -r requirements.txt
+```
+Then, we downloaded the dataset and put it in the directory.
+
+### Training the Model
 
