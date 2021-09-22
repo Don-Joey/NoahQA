@@ -1,0 +1,63 @@
+{
+  "dataset_reader": {
+    "type": "comwp_roberta-edge",
+    "roberta_tokenizer":{
+      "type": "roberta-drop-edge",
+      "pretrained_model": "roberta-large"
+    },
+    "token_indexers": {
+      "tokens": {
+        "type": "roberta-drop-edge",
+        "pretrained_model": "roberta-large"
+      }
+    },
+    "passage_length_limit": 400,
+    "question_length_limit": 400,
+    "skip_when_all_empty": ["passage_span","question_span","generation"],
+    "instance_format": "drop"
+  },
+  "validation_dataset_reader": {
+    "type": "comwp_roberta-edge",
+    "roberta_tokenizer":{
+      "type": "roberta-drop-edge",
+      "pretrained_model": "roberta-large"
+    },
+    "token_indexers": {
+      "tokens": {
+        "type": "roberta-drop-edge",
+        "pretrained_model": "roberta-large"
+      }
+    },
+    "passage_length_limit": 400,
+    "question_length_limit": 400,
+    "skip_when_all_empty": ["passage_span","question_span","generation"],
+    "instance_format": "drop"
+  },
+  "train_data_path": "noahqa/en/train.json",
+  "validation_data_path": "noahqa/en/valid.json",
+  "model": {
+    "type": "comwp-roberta-edge",
+    "roberta_pretrained_model": "roberta-large",
+    "dropout_prob": 0.1,
+    "answering_abilities": [
+      "passage_span_extraction", 
+      "question_span_extraction",
+      "generation"
+    ]
+  },
+  "data_loader": {
+    "batch_size": 8,
+    "shuffle": false
+  },
+  "trainer": {
+          "num_epochs": 40,
+          "grad_norm": 5,
+          "patience": 10,
+          "validation_metric": "+f1",
+          "cuda_device": 8,
+          "optimizer": {
+              "type": "bert_adam",
+              "lr": 5e-6
+          }
+  }
+}
