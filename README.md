@@ -24,3 +24,10 @@ Then, we downloaded the dataset and put it in the directory.
 
 ### Training the Model
 
+We can edit the specific setting in configuration ''config_for_xxx.json''
+
+```
+allennlp train config_for_xxx.json -s xxx_dir --include-package xxx
+```
+
+the parameter and configuration of trained model will be saved in xxx_dir
