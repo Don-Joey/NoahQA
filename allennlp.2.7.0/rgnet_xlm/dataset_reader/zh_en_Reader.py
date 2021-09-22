@@ -12,7 +12,6 @@ import re
 from allennlp.common.file_utils import cached_path
 from allennlp.data.fields import (
     Field,
-    #TextField,
     MetadataField,
     LabelField,
     ListField,
@@ -115,52 +114,6 @@ class RoBertaDropTokenIndexer(WordpieceIndexer):
 
 @DatasetReader.register("zh_en_xlm-edge")
 class ComwpReader(DatasetReader):
-    """
-    Reads a JSON-formatted DROP dataset file and returns instances in a few different possible
-    formats.  The input format is complicated; see the test fixture for an example of what it looks
-    like.  The output formats all contain a question ``TextField``, a passage ``TextField``, and
-    some kind of answer representation.  Because DROP has instances with several different kinds of
-    answers, this dataset reader allows you to filter out questions that do not have answers of a
-    particular type (e.g., remove questions that have numbers as answers, if you model can only
-    give passage spans as answers).  We typically return all possible ways of arriving at a given
-    answer string, and expect models to marginalize over these possibilities.
-
-    Parameters
-    ----------
-    tokenizer : ``Tokenizer``, optional (default=``SpacyTokenizer()``)
-        We use this ``Tokenizer`` for both the question and the passage.  See :class:`Tokenizer`.
-        Default is ```SpacyTokenizer()``.
-    token_indexers : ``Dict[str, TokenIndexer]``, optional
-        We similarly use this for both the question and the passage.  See :class:`TokenIndexer`.
-        Default is ``{"tokens": SingleIdTokenIndexer()}``.
-    passage_length_limit : ``int``, optional (default=None)
-        If specified, we will cut the passage if the length of passage exceeds this limit.
-    question_length_limit : ``int``, optional (default=None)
-        If specified, we will cut the question if the length of passage exceeds this limit.
-    skip_when_all_empty: ``List[str]``, optional (default=None)
-        In some cases such as preparing for training examples, you may want to skip some examples
-        when there are no gold labels. You can specify on what condition should the examples be
-        skipped. Currently, you can put "passage_span", "question_span", "addition_subtraction",
-        or "counting" in this list, to tell the reader skip when there are no such label found.
-        If not specified, we will keep all the examples.
-    instance_format: ``str``, optional (default="drop")
-        We try to be generous in providing a few different formats for the instances in DROP,
-        in terms of the ``Fields`` that we return for each ``Instance``, to allow for several
-        different kinds of models.  "drop" format will do processing to detect numbers and
-        various ways those numbers can be arrived at from the passage, and return ``Fields``
-        related to that.  "bert" format only allows passage spans as answers, and provides a
-        "question_and_passage" field with the two pieces of text joined as BERT expects.
-        "squad" format provides the same fields that our BiDAF and other SQuAD models expect.
-    relaxed_span_match_for_finding_labels : ``bool``, optional (default=True)
-        DROP dataset contains multi-span answers, and the date-type answers are usually hard to
-        find exact span matches for, also.  In order to use as many examples as possible
-        to train the model, we may not want a strict match for such cases when finding the gold
-        span labels. If this argument is true, we will treat every span in the multi-span
-        answers as correct, and every token in the date answer as correct, too.  Because models
-        trained on DROP typically marginalize over all possible answer positions, this is just
-        being a little more generous in what is being marginalized.  Note that this will not
-        affect evaluation.
-    """
 
     def __init__(
             self,
@@ -269,7 +222,6 @@ class ComwpReader(DatasetReader):
                             question_answer['answer_type'] == [4,1]:
                         answer['spans'] = str(question_answer["answer"]).rstrip('了').rstrip('。').lower()
                         answer_txt = str(question_answer["answer"]).rstrip('了').rstrip('。').lower()
-                    #if "answer_formula" in question_answer:
 
                     if question_answer["answer_type"][0] == 3 or question_answer["answer_type"] == [4,0]:
                         try:
@@ -317,10 +269,6 @@ class ComwpReader(DatasetReader):
 
                 instance = None
                 if question_type[0] == 6 or question_type == [2, 0] or question_type[0] == 1 or question_type == [5, 0] or question_type[0] == 3 or question_type[0] == 4:
-                        #question_type[0] == 3 or question_type[0] == 4:
-                        #question_type[0] == 6 or question_type == [2, 0] or question_type[0] == 1 or question_type == [5, 0]:
-                    # if question_type[0] != 1 and question_type[0] != 5 and question_type != [6,1] and question_type[0] != 2 and question_type[0] != 4\
-                    #       and question_type[0] != 3:
                     instance,length_of_input = self.zh_text_to_instance(
                         question_text,
                         passage_text,
@@ -353,7 +301,6 @@ class ComwpReader(DatasetReader):
             passage_info_list.append(AUGMENT)
             passage_text = " ".join(passage_info_list)
 
-            # passage_text = for passage_info["passage"]  \mark
             passage_tokens = self._en_tokenizer.tokenize(passage_text)
             passage_tokens = split_tokens_by_hyphen(passage_tokens)
 
@@ -399,7 +346,6 @@ class ComwpReader(DatasetReader):
                             question_answer['answer_type'] == [4,1]:
                         answer['spans'] = str(question_answer["answer"]).lower()
                         answer_txt = str(question_answer["answer"]).lower()
-                    #if "answer_formula" in question_answer:
 
                     if question_answer["answer_type"][0] == 3 or question_answer["answer_type"] == [4,0]:
                         try:
@@ -447,10 +393,6 @@ class ComwpReader(DatasetReader):
 
                 instance = None
                 if question_type[0] == 6 or question_type == [2, 0] or question_type[0] == 1 or question_type == [5, 0] or question_type[0] == 3 or question_type[0] == 4:
-                        #question_type[0] == 3 or question_type[0] == 4:
-                        #question_type[0] == 6 or question_type == [2, 0] or question_type[0] == 1 or question_type == [5, 0]:
-                    # if question_type[0] != 1 and question_type[0] != 5 and question_type != [6,1] and question_type[0] != 2 and question_type[0] != 4\
-                    #       and question_type[0] != 3:
                     instance,length_of_input = self.en_text_to_instance(
                         question_text,
                         passage_text,
@@ -472,15 +414,7 @@ class ComwpReader(DatasetReader):
                     yield instance
                 else:
                     skip_count += 1
-            '''
-            if 'train' in file_path and kept_count > 100:
-                print(1111111)
-                break
-            elif ('valid' in file_path or 'test' in file_path) and kept_count > 10:
-                break
-            '''
         print(kept_count, skip_count)
-        # self.wb1.save('supplment_1.13.xlsx')
         logger.info(f"Skipped {skip_count} questions, kept {kept_count} questions.")
 
     #@overrides
@@ -804,8 +738,6 @@ class ComwpReader(DatasetReader):
         answer_texts: List[str] = []
 
         if answer_annotations:
-            # Currently we only use the first annotated answer here, but actually this doesn't affect
-            # the training, because we only have one annotation for the train set.
             answer_type, answer_texts = self.extract_answer_info_from_annotation(
                 answer_annotations[0], question_type
             )
@@ -816,18 +748,14 @@ class ComwpReader(DatasetReader):
             answer_annotations[0] = {'generation': answer_texts[:-1],'arithmetic_ans':answer_texts[-1]}
 
 
-        # Tokenize the answer text in order to find the matched span based on token
         tokenized_answer_texts = []
 
         if answer_type == 'generation':
             answer_texts.pop(-1)
             answer_texts[0] = ' '.join(split_equation(answer_texts[0], num_list))
-            #print("answer_texts:",answer_texts)
             for answer_text in answer_texts:
                 answer_tokens = self._zh_tokenizer.tokenize(str(answer_text).lower())
                 answer_tokens = split_tokens_by_hyphen(answer_tokens)
-                #print("answer_tokens",answer_tokens)
-                #answer_tokens = split_tokens_by_hyphen(answer_tokens)
                 answer_tokens_replace = []
                 answer_curr_index = 0
                 for answer_word_token_index, answer_word_token in enumerate(answer_tokens):
@@ -857,7 +785,6 @@ class ComwpReader(DatasetReader):
                 answer_tokens = answer_tokens_replace
                 tokenized_answer_texts.append(" ".join(token.text for token in answer_tokens))
         else:
-            #print("answer_texts:", answer_texts)
             for answer_text in answer_texts:
                 answer_tokens = self._zh_tokenizer.tokenize(str(answer_text).lower())
                 answer_tokens = split_tokens_by_hyphen(answer_tokens)
@@ -890,11 +817,7 @@ class ComwpReader(DatasetReader):
 
         
         if self.instance_format == "drop":
-            
-
-            #all_number = numbers_in_passage + numbers_in_question
             mask_indices = [0, qlen + 1, len(question_passage_tokens) - 1]
-            #print(passage_tokens,tokenized_answer_texts)
             valid_passage_spans = (
                 self.find_valid_spans(passage_tokens, tokenized_answer_texts)
                 if tokenized_answer_texts
@@ -928,19 +851,6 @@ class ComwpReader(DatasetReader):
                     type_to_answer_map[skip_type] for skip_type in self.skip_when_all_empty
             ):
                 return None
-            '''
-            print('question_passage_tokens',question_passage_tokens)
-            print('tokenized_answer_texts',tokenized_answer_texts)
-            print('valid_passage_spans',valid_passage_spans)
-            print('valid_question_spans',valid_question_spans)
-            print('number_indices',number_indices)
-            print('question_number_indices',question_number_indices)
-            print("para_sentences_start_map",para_sentences_start_map)
-            print("para_sentences_end_map",para_sentences_end_map)
-            print("ques_sentences_start_map",ques_sentences_start_map)
-            print("ques_sentences_end_map",ques_sentences_end_map)
-            print('*'*97)
-            '''
 
             answer_info = {
                 "answer_texts": answer_texts,  # this `answer_texts` will not be used for evaluation
@@ -1296,7 +1206,6 @@ class ComwpReader(DatasetReader):
         SEP_indices.append(question_passage_tokens[-1].text_id)
         SEP_indices.append(-1)
         number_indices = [index + qlen + 2 for index in number_indices] + [-1]
-        # Not done in-place so they won't change the numbers saved for the passage
         number_len = number_len + [1]
         numbers_in_passage = numbers_in_passage + [0]
         number_tokens = [Token(str(number)) for number in numbers_in_passage]
@@ -1320,8 +1229,6 @@ class ComwpReader(DatasetReader):
         answer_texts: List[str] = []
 
         if answer_annotations:
-            # Currently we only use the first annotated answer here, but actually this doesn't affect
-            # the training, because we only have one annotation for the train set.
             answer_type, answer_texts = self.extract_answer_info_from_annotation(
                 answer_annotations[0], question_type
             )
@@ -1338,12 +1245,9 @@ class ComwpReader(DatasetReader):
         if answer_type == 'generation':
             answer_texts.pop(-1)
             answer_texts[0] = ' '.join(split_equation(answer_texts[0], num_list))
-            #print("answer_texts:",answer_texts)
             for answer_text in answer_texts:
                 answer_tokens = self._en_tokenizer.tokenize(str(answer_text).lower())
                 answer_tokens = split_tokens_by_hyphen(answer_tokens)
-                #print("answer_tokens",answer_tokens)
-                #answer_tokens = split_tokens_by_hyphen(answer_tokens)
                 answer_tokens_replace = []
                 answer_curr_index = 0
                 for answer_word_token_index, answer_word_token in enumerate(answer_tokens):
@@ -1373,7 +1277,6 @@ class ComwpReader(DatasetReader):
                 answer_tokens = answer_tokens_replace
                 tokenized_answer_texts.append(" ".join(token.text for token in answer_tokens))
         else:
-            #print("answer_texts:", answer_texts)
             for answer_text in answer_texts:
                 answer_tokens = self._en_tokenizer.tokenize(str(answer_text).lower())
                 answer_tokens = split_tokens_by_hyphen(answer_tokens)
@@ -1407,11 +1310,7 @@ class ComwpReader(DatasetReader):
         
         if self.instance_format == "drop":
             
-
-            #all_number = numbers_in_passage + numbers_in_question
             mask_indices = [0, qlen + 1, len(question_passage_tokens) - 1]
-            
-            #print(passage_tokens,tokenized_answer_texts)
             valid_passage_spans = (
                 self.find_valid_spans(passage_tokens, tokenized_answer_texts)
                 if tokenized_answer_texts
@@ -1453,19 +1352,6 @@ class ComwpReader(DatasetReader):
                 "answer_question_spans": valid_question_spans,
                 "answer_as_generation": valid_generation,
             }
-            '''
-            print('question_passage_tokens',question_passage_tokens)
-            print('tokenized_answer_texts',tokenized_answer_texts)
-            print('valid_passage_spans',valid_passage_spans)
-            print('valid_question_spans',valid_question_spans)
-            print('number_indices',number_indices)
-            print('question_number_indices',question_number_indices)
-            print("para_sentences_start_map",para_sentences_start_map)
-            print("para_sentences_end_map",para_sentences_end_map)
-            print("ques_sentences_start_map",ques_sentences_start_map)
-            print("ques_sentences_end_map",ques_sentences_end_map)
-            print('*'*97)
-            '''
             if 'spans' in answer_annotations[0].keys():
                 answer_annotations[0]['spans'][0] = str(answer_annotations[0]['spans'][0]).replace(' ', '').replace('▁',
                                                                                                                     ' ').strip()
@@ -1601,33 +1487,6 @@ class ComwpReader(DatasetReader):
             IndexField(index, question_passage_field) for index in question_start_map
         ]
         fields['question_start_index'] = ListField(question_start_index_fields)
-
-        '''
-        para_start_index_fields = \
-            [ArrayField(np.arange(start_ind, start_ind + para_sentences_start_len[i]), padding_value=-1)
-             for i, start_ind in enumerate(para_sentences_start_map)]
-        fields["para_start_index"] = ListField(para_start_index_fields)
-
-        para_end_index_fields = \
-            [ArrayField(np.arange(start_ind, start_ind + para_sentences_end_len[i]), padding_value=-1)
-             for i, start_ind in enumerate(para_sentences_end_map)]
-        fields['para_end_index'] = ListField(para_end_index_fields)
-
-        ques_start_index_fields = \
-            [ArrayField(np.arange(start_ind, start_ind + ques_sentences_start_len[i]), padding_value=-1)
-             for i, start_ind in enumerate(ques_sentences_start_map)]
-        fields['ques_start_index'] = ListField(ques_start_index_fields)
-
-        ques_end_index_fields = \
-            [ArrayField(np.arange(start_ind, start_ind + ques_sentences_end_len[i]), padding_value=-1)
-             for i, start_ind in enumerate(ques_sentences_end_map)]
-        fields['ques_end_index'] = ListField(ques_end_index_fields)
-
-        question_start_index_fields = \
-            [ArrayField(np.arange(start_ind, start_ind + question_start_len[i]), padding_value=-1)
-             for i, start_ind in enumerate(question_start_map)]
-        fields['question_start_index'] = ListField(question_start_index_fields)
-        '''
         pp_graph_array = np.array(graph['pp_graph'])
         pp_graph_fields = ArrayField(pp_graph_array, 0)
         fields["pp_graph"] = pp_graph_fields
@@ -1706,56 +1565,9 @@ class ComwpReader(DatasetReader):
             fields["answer_as_generation"] = generation_fields
 
         metadata.update(additional_metadata)
-        # print(metadata)
         fields["metadata"] = MetadataField(metadata)
 
         return Instance(fields),len(question_passage_tokens)
-
-    @staticmethod
-    def make_bert_drop_instance(
-            question_tokens: List[Token],
-            passage_tokens: List[Token],
-            question_concat_passage_tokens: List[Token],
-            token_indexers: Dict[str, TokenIndexer],
-            passage_text: str,
-            answer_info: Dict[str, Any] = None,
-            additional_metadata: Dict[str, Any] = None,
-    ) -> Instance:
-        additional_metadata = additional_metadata or {}
-        fields: Dict[str, Field] = {}
-        passage_offsets = [(token.idx, token.idx + len(token.text)) for token in passage_tokens]
-
-        # This is separate so we can reference it later with a known type.
-        passage_field = TextField(passage_tokens, token_indexers)
-        question_field = TextField(question_tokens, token_indexers)
-        fields["passage"] = passage_field
-        fields["question"] = question_field
-        question_and_passage_field = TextField(question_concat_passage_tokens, token_indexers)
-        fields["question_and_passage"] = question_and_passage_field
-
-        metadata = {
-            "original_passage": passage_text,
-            "passage_token_offsets": passage_offsets,
-            "question_tokens": [token.text for token in question_tokens],
-            "passage_tokens": [token.text for token in passage_tokens],
-        }
-
-        if answer_info:
-            metadata["answer_texts"] = answer_info["answer_texts"]
-
-            passage_span_fields: List[Field] = [
-                SpanField(span[0], span[1], question_and_passage_field)
-                for span in answer_info["answer_passage_spans"]
-            ]
-            if not passage_span_fields:
-                passage_span_fields.append(SpanField(-1, -1, question_and_passage_field))
-            fields["answer_as_passage_spans"] = ListField(passage_span_fields)
-
-        metadata.update(additional_metadata)
-        fields["metadata"] = MetadataField(metadata)
-        return Instance(fields)
-
-
 
     @staticmethod
     def extract_answer_info_from_annotation(

@@ -12,7 +12,6 @@ import re
 from allennlp.common.file_utils import cached_path
 from allennlp.data.fields import (
     Field,
-    #TextField,
     MetadataField,
     LabelField,
     ListField,
@@ -195,7 +194,6 @@ class ComwpReader(DatasetReader):
             passage_length = len(passage_info['passage'])
             passage_info_list.append(AUGMENT)
             passage_text = " ".join(passage_info_list)
-            # passage_text = for passage_info["passage"]  \mark
             passage_tokens = self._tokenizer.tokenize(passage_text)
             passage_tokens = split_tokens_by_hyphen(passage_tokens)
 
@@ -289,10 +287,6 @@ class ComwpReader(DatasetReader):
 
                 instance = None
                 if question_type[0] == 6 or question_type == [2, 0] or question_type[0] == 1 or question_type == [5, 0] or question_type[0] == 3 or question_type[0] == 4:
-                        #question_type[0] == 3 or question_type[0] == 4:
-                        #question_type[0] == 6 or question_type == [2, 0] or question_type[0] == 1 or question_type == [5, 0]:
-                    # if question_type[0] != 1 and question_type[0] != 5 and question_type != [6,1] and question_type[0] != 2 and question_type[0] != 4\
-                    #       and question_type[0] != 3:
                     instance = self.text_to_instance(
                         question_text,
                         passage_text,
@@ -314,15 +308,7 @@ class ComwpReader(DatasetReader):
                     yield instance
                 else:
                     skip_count += 1
-            '''
-            if 'train' in file_path and kept_count > 100:
-                print(1111111)
-                break
-            elif ('valid' in file_path or 'test' in file_path) and kept_count > 10:
-                break
-            '''
         print(kept_count, skip_count)
-        # self.wb1.save('supplment_1.13.xlsx')
         logger.info(f"Skipped {skip_count} questions, kept {kept_count} questions.")
 
     @overrides
@@ -622,7 +608,6 @@ class ComwpReader(DatasetReader):
         SEP_indices.append(question_passage_tokens[-1].text_id)
         SEP_indices.append(-1)
         number_indices = [index + qlen + 2 for index in number_indices] + [-1]
-        # Not done in-place so they won't change the numbers saved for the passage
         number_len = number_len + [1]
         numbers_in_passage = numbers_in_passage + [0]
         number_tokens = [Token(str(number)) for number in numbers_in_passage]
@@ -646,8 +631,6 @@ class ComwpReader(DatasetReader):
         answer_texts: List[str] = []
 
         if answer_annotations:
-            # Currently we only use the first annotated answer here, but actually this doesn't affect
-            # the training, because we only have one annotation for the train set.
             answer_type, answer_texts = self.extract_answer_info_from_annotation(
                 answer_annotations[0], question_type
             )
@@ -665,12 +648,9 @@ class ComwpReader(DatasetReader):
         if answer_type == 'generation':
             answer_texts.pop(-1)
             answer_texts[0] = ' '.join(split_equation(answer_texts[0], num_list))
-            #print("answer_texts:",answer_texts)
             for answer_text in answer_texts:
                 answer_tokens = self._tokenizer.tokenize(str(answer_text).lower())
                 answer_tokens = split_tokens_by_hyphen(answer_tokens)
-                #print("answer_tokens",answer_tokens)
-                #answer_tokens = split_tokens_by_hyphen(answer_tokens)
                 answer_tokens_replace = []
                 answer_curr_index = 0
                 for answer_word_token_index, answer_word_token in enumerate(answer_tokens):
@@ -700,7 +680,6 @@ class ComwpReader(DatasetReader):
                 answer_tokens = answer_tokens_replace
                 tokenized_answer_texts.append(" ".join(token.text for token in answer_tokens))
         else:
-            #print("answer_texts:", answer_texts)
             for answer_text in answer_texts:
                 answer_tokens = self._tokenizer.tokenize(str(answer_text).lower())
                 answer_tokens = split_tokens_by_hyphen(answer_tokens)
@@ -734,11 +713,8 @@ class ComwpReader(DatasetReader):
         
         if self.instance_format == "drop":
             
-
-            #all_number = numbers_in_passage + numbers_in_question
             mask_indices = [0, qlen + 1, len(question_passage_tokens) - 1]
             
-            #print(passage_tokens,tokenized_answer_texts)
             valid_passage_spans = (
                 self.find_valid_spans(passage_tokens, tokenized_answer_texts)
                 if tokenized_answer_texts
@@ -754,7 +730,6 @@ class ComwpReader(DatasetReader):
             )
             for span_id, span in enumerate(valid_question_spans):
                 valid_question_spans[span_id] = (span[0]+1,span[1]+1)
-            # exit()
 
             generation_mask_index = 0
             valid_generation = []
@@ -780,20 +755,6 @@ class ComwpReader(DatasetReader):
                 "answer_question_spans": valid_question_spans,
                 "answer_as_generation": valid_generation,
             }
-            '''
-            print('question_passage_tokens',question_passage_tokens)
-            print('tokenized_answer_texts',tokenized_answer_texts)
-            print('valid_passage_spans',valid_passage_spans)
-            print('valid_question_spans',valid_question_spans)
-            print('number_indices',number_indices)
-            print('question_number_indices',question_number_indices)
-            print("para_sentences_start_map",para_sentences_start_map)
-            print("para_sentences_end_map",para_sentences_end_map)
-            print("ques_sentences_start_map",ques_sentences_start_map)
-            print("ques_sentences_end_map",ques_sentences_end_map)
-            print("answer_annotations",answer_annotations)
-            print('*'*97)
-            '''
             if 'spans' in answer_annotations[0].keys():
                 answer_annotations[0]['spans'][0] = str(answer_annotations[0]['spans'][0]).replace(' ', '').replace('▁',
                                                                                                                     ' ').strip()
@@ -930,32 +891,6 @@ class ComwpReader(DatasetReader):
         ]
         fields['question_start_index'] = ListField(question_start_index_fields)
 
-        '''
-        para_start_index_fields = \
-            [ArrayField(np.arange(start_ind, start_ind + para_sentences_start_len[i]), padding_value=-1)
-             for i, start_ind in enumerate(para_sentences_start_map)]
-        fields["para_start_index"] = ListField(para_start_index_fields)
-
-        para_end_index_fields = \
-            [ArrayField(np.arange(start_ind, start_ind + para_sentences_end_len[i]), padding_value=-1)
-             for i, start_ind in enumerate(para_sentences_end_map)]
-        fields['para_end_index'] = ListField(para_end_index_fields)
-
-        ques_start_index_fields = \
-            [ArrayField(np.arange(start_ind, start_ind + ques_sentences_start_len[i]), padding_value=-1)
-             for i, start_ind in enumerate(ques_sentences_start_map)]
-        fields['ques_start_index'] = ListField(ques_start_index_fields)
-
-        ques_end_index_fields = \
-            [ArrayField(np.arange(start_ind, start_ind + ques_sentences_end_len[i]), padding_value=-1)
-             for i, start_ind in enumerate(ques_sentences_end_map)]
-        fields['ques_end_index'] = ListField(ques_end_index_fields)
-
-        question_start_index_fields = \
-            [ArrayField(np.arange(start_ind, start_ind + question_start_len[i]), padding_value=-1)
-             for i, start_ind in enumerate(question_start_map)]
-        fields['question_start_index'] = ListField(question_start_index_fields)
-        '''
         pp_graph_array = np.array(graph['pp_graph'])
         pp_graph_fields = ArrayField(pp_graph_array, 0)
         fields["pp_graph"] = pp_graph_fields
@@ -1034,53 +969,8 @@ class ComwpReader(DatasetReader):
             fields["answer_as_generation"] = generation_fields
 
         metadata.update(additional_metadata)
-        # print(metadata)
         fields["metadata"] = MetadataField(metadata)
 
-        return Instance(fields)
-
-    @staticmethod
-    def make_bert_drop_instance(
-            question_tokens: List[Token],
-            passage_tokens: List[Token],
-            question_concat_passage_tokens: List[Token],
-            token_indexers: Dict[str, TokenIndexer],
-            passage_text: str,
-            answer_info: Dict[str, Any] = None,
-            additional_metadata: Dict[str, Any] = None,
-    ) -> Instance:
-        additional_metadata = additional_metadata or {}
-        fields: Dict[str, Field] = {}
-        passage_offsets = [(token.idx, token.idx + len(token.text)) for token in passage_tokens]
-
-        # This is separate so we can reference it later with a known type.
-        passage_field = TextField(passage_tokens, token_indexers)
-        question_field = TextField(question_tokens, token_indexers)
-        fields["passage"] = passage_field
-        fields["question"] = question_field
-        question_and_passage_field = TextField(question_concat_passage_tokens, token_indexers)
-        fields["question_and_passage"] = question_and_passage_field
-
-        metadata = {
-            "original_passage": passage_text,
-            "passage_token_offsets": passage_offsets,
-            "question_tokens": [token.text for token in question_tokens],
-            "passage_tokens": [token.text for token in passage_tokens],
-        }
-
-        if answer_info:
-            metadata["answer_texts"] = answer_info["answer_texts"]
-
-            passage_span_fields: List[Field] = [
-                SpanField(span[0], span[1], question_and_passage_field)
-                for span in answer_info["answer_passage_spans"]
-            ]
-            if not passage_span_fields:
-                passage_span_fields.append(SpanField(-1, -1, question_and_passage_field))
-            fields["answer_as_passage_spans"] = ListField(passage_span_fields)
-
-        metadata.update(additional_metadata)
-        fields["metadata"] = MetadataField(metadata)
         return Instance(fields)
 
 
