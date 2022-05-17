@@ -31,3 +31,10 @@ allennlp train config_for_xxx.json -s xxx_dir --include-package xxx
 ```
 
 the parameter and configuration of trained model will be saved in xxx_dir
+
+## Evaluate_Script
+We provide evaluate_script.py to evaluate the trained model.
+```
+python evaluate_script.py --archive_file xxx1 --include-package xxx2 --language xxx3
+```
+"xxx1" is the trained model directory which contain the parameters of model and any other files, "xxx2" is the package which you include in when training. "xxx3" is the language version you choosed.
